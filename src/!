@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/wait.h>
-
 
 #include "scull.h"
 
@@ -45,7 +43,7 @@ void current_task_info(task_info *info){
 	printf("tgid %ld,", (long)info->tgid);
 	printf("nv %ls,", info->nvcsw);
 	printf("niv %lu\n", info->nivcsw);
-};
+}
 
 
 
@@ -146,42 +144,36 @@ static int do_op(int fd, cmd_t cmd)
 		ret = 0;
 		break;
 	case 'K':
-/*		info = (task_info*)malloc(sizeof(task_info));
+		info = (task_info*)malloc(sizeof(task_info));
 		ret = ioctl(fd, SCULL_IOCKQUANTUM, info);
 		current_task_info(info);
 		free(info);
-		break; */
+		break;
 
 	case 'p':
-
-		info = (task_info*)malloc(sizeof(task_info));
-
-
+//		info = (task_info*)malloc(sizeof(task_info));
 //		pid_t id = 1;	
 		for(int i = 0; i < numP; i++){
 			pid_t id  = fork();
 			printf("id: %d\n", id);		
-			if(id == 0){
-//				printf("before ioctl");
-				ret = ioctl(fd, SCULL_IOCKQUANTUM, info);
-//				printf("before print");
+		/*	if(id > 0){
+				id = fork();
+				printf("id: %d\n", id);
+			}else */if(id == 0){
+				printf("before ioctl");
+				ret = ioctl(fd, SCULL_IOCKQUANTUM, &info);
+				printf("before print");
 				current_task_info(info);
 				exit(0);
 			}else if (id < 0){
 				printf("id failed");
-			}else{
-				if (wait(NULL < 0)){
-					printf("wait failed");
-				}
 			}
-		}
-	
-/*	
+		}		
 		printf("before wait");
-		if(wait(NULL) != -1){
+		if(wait(NULL) > 0){
 			printf("wait finished");
-		} */
-
+		}
+		
 		
 //		free(info);
 
@@ -209,7 +201,7 @@ static int do_op(int fd, cmd_t cmd)
 		
 		free(info);
 		*/
-		
+		ret = 0;
 		break;
 	default:
 		/* Should never occur */

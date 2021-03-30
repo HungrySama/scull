@@ -38,6 +38,10 @@
  * Our parameters which can be set at load time.
  */
 
+node head = {.pid = NULL, .tgid = NULL, .next = NULL}
+
+static DEFINE_MUTEX(list_lock);
+
 static int scull_major =   SCULL_MAJOR;
 static int scull_minor =   0;
 static int scull_quantum = SCULL_QUANTUM;
@@ -55,59 +59,6 @@ static struct cdev scull_cdev;		/* Char device structure		*/
 /*
  * Open and close
  */
-
-static task_info info;
-static DEFINE_MUTEX(list_lock);
-static node *taskList = NULL;
-
-bool exists(pid_t pid, pid_t tgid){
-	node *curr = taskList;
-	while(curr != NULL){
-		if(curr->pid == pid && curr->tgid == tgid){
-			return true;
-		}
-	curr = curr->next;
-	}
-	return false;
-}
-
-
-
-void taskAdd(pid_t pid, pid_t tgid){
-	node *list = taskList;
-//	node *check = taskList;
-//	bool exists = false;
-//	bool exists;
-	node *newNode;
-       	newNode = (node*)kmalloc(sizeof(node), GFP_KERNEL);
-	printk(KERN_INFO "testing taskadd");
-	//setting the fields of the new node
-	newNode->pid = pid;
-	newNode->tgid = tgid;
-	newNode->next = NULL;
-
-	if(taskList == NULL){
-		taskList = newNode;
-		printk(KERN_INFO "inside head");
-	}else{
-		//checking to see if node already exits in list	
-//		while(check->next != NULL){
-//			if(check->pid == pid && check->tgid == tgid){
-//				exists = true;		
-//			}
-//		}
-		
-		//if node doesnt exist, we add
-		printk(KERN_INFO "inside other nodes");
-		if(!exists(pid, tgid)){
-			while(list->next != NULL){
-				list = list->next;
-			}	
-			list->next = newNode;
-		}
-	}
-}
-
 
 static int scull_open(struct inode *inode, struct file *filp)
 {
@@ -128,11 +79,29 @@ static int scull_release(struct inode *inode, struct file *filp)
 static long scull_ioctl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
-//	static DEFINE_MUTEX(list_lock);	
+
 	int err = 0, tmp;
 	int retval = 0;
  			
+	struct task_struct *task = current;
+	struct task_info info;
                                                                        
+	info.state = task->state;
+	info.stack = task->stack; 
+	info.cpu = task->cpu;
+	info.prio = task->prio;
+	info.static_prio = task->static_prio;
+	info.normal_prio = task->prio;
+	info.rt_priority = task->rt_priority;
+	info.pid = task->pid;
+	info.tgid = task->tgid;
+	info.nvcsw = tasl->nvcsw;
+	info nivcsw = task -> nivcsw;
+
+	struct *node new  = { .pid = info.pid, .tgid 
+	
+
+
 	/*
 	 * extract the type and number bitfields, and don't decode
 	 * wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
@@ -187,28 +156,33 @@ static long scull_ioctl(struct file *filp, unsigned int cmd,
 		scull_quantum = arg;
 		return tmp;
 
-	case SCULL_IOCKQUANTUM:
+	case SKULL_IOCAQUANTUM:
 
-		info.state = current->state;
-		info.stack = current->stack; 
-		info.cpu = current->cpu;
-		info.prio = current->prio;
-		info.static_prio = current->static_prio;
-		info.normal_prio = current->normal_prio;
-		info.rt_priority = current->rt_priority;         	
-		info.pid = current->pid;                         	
-		info.tgid = current->tgid;                       	
-		info.nvcsw = current->nvcsw;                     	
-		info.nivcsw = current->nivcsw;                 	
-        
-   		printk(KERN_INFO "before mutex\n");	
-		mutex_lock(&list_lock);
-		taskAdd(info.pid, info.tgid);
-		mutex_unlock(&list_lock); 
-		printk(KERN_INFO "after mutex\n");
+	struct task_struct *task = current;
+	struct task_info info;                        	
+                                                      
+	info.state = task->state;
+	info.stack = task->stack; 
+	info.cpu = task->cpu;
+	info.prio = task->prio;
+	info.static_prio = task->static_prio;
+	info.normal_prio = task->prio;
+	info.rt_priority = task->rt_priority;         	
+	info.pid = task->pid;                         	
+	info.tgid = task->tgid;                       	
+	info.nvcsw = tasl->nvcsw;                     	
+	info nivcsw = task -> nivcsw;                 	
+                                                      	
+	struct node new  = { .pid = info.pid, .tgid = info.tgid .next = NULL};
 
-		retval = __copy_to_user((task_info __user*)arg, &info, sizeof(task_info));
-		printk(KERN_INFO "after copy to user\n");
+	mutex_lock(&list_lock);
+	taskAdd(new, head);
+	mutex_ unlock(&list_lock); 
+	
+	printk(KERN_INFO);
+
+
+	retval = copy_to_user((int __user *)arg, task_info, sizeof(task_info))
 		break;
 
 	  default:  /* redundant, as cmd was checked against MAXNR */
@@ -242,32 +216,8 @@ void scull_cleanup_module(void)
 	/* Get rid of the char dev entry */
 	cdev_del(&scull_cdev);
 
-
-	//printing to kern
-	node *head = taskList;
-	int taskCount = 1;
-	printk(KERN_INFO "Linked List to be deleted: \n");
-	
-	while(head != NULL){
-		if(head->next == NULL){
-			printk(KERN_INFO "Task %d: PID: %d; TGID %d\n", taskCount, head->pid, head->tgid);
-		}else{
-			printk(KERN_INFO "Task %d: PID: %d; TGID %d ->\n", taskCount, head->pid, head->tgid);
-		}
-		head = head->next;
-		taskCount++;
-	}
-
-	//Freeing the list
-	node *free;
-	while(taskList != NULL){
-		free = taskList;
-		taskList = taskList->next;
-		kfree(free);
-	}
-
 	/* cleanup_module is never called if registering failed */
-	unregister_chrdev_region(devno, 1);	
+	unregister_chrdev_region(devno, 1);
 }
 
 

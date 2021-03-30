@@ -19,7 +19,7 @@
 #define _SCULL_H_
 
 #include <linux/ioctl.h> /* needed for the _IOW etc stuff used later */
-
+//#include <linux/slab.h>
 
 #ifndef SCULL_MAJOR
 #define SCULL_MAJOR 0   /* dynamic major by default */
@@ -59,8 +59,41 @@
 #define SCULL_IOCXQUANTUM _IOWR(SCULL_IOC_MAGIC, 5, int)
 #define SCULL_IOCHQUANTUM _IO(SCULL_IOC_MAGIC,   6)
 
+typedef struct task_info{
+	long state;
+	void *stack;
+	unsigned int cpu;
+	int prio;
+	int static_prio;
+	int normal_prio;
+	unsigned int rt_priority;
+	pid_t pid;
+	pid_t tgid;
+	unsigned long nvcsw;
+	unsigned long nivcsw;
+}task_info;
+
+typedef struct node{
+	pid_t pid;
+	pid_t tgid;
+	struct node *next;	
+}node;
+
+/*
+void taskAdd(node *newNode, node *head){
+	while(head->next != NULL){
+		head = head.next;
+	}
+	
+	kmalloc(sizeof(*newNode), GFP_KERNEL);
+	head->next = newNode;
+
+}taskAdd;
+*/
+
+#define SCULL_IOCKQUANTUM _IOR(SCULL_IOC_MAGIC, 7, struct task_info)
 /* ... more to come */
 
-#define SCULL_IOC_MAXNR 6
+#define SCULL_IOC_MAXNR 7
 
 #endif /* _SCULL_H_ */
